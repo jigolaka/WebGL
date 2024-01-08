@@ -5,7 +5,7 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 
-    <title>PA#1</title>
+    <title>PA#2</title>
     <style>
         body {
             background-color: #EEEEEE;
@@ -25,6 +25,70 @@
 
     <p id="message">Drag your mouse on the cube to rotate it.<br>
         (On a touch screen, you can use your finger.)</p>
+
+    <table>
+        <tr>
+            <td>
+                <table>
+                    <tr>
+                        <center><span>Light position</span></center>
+                        <td><label for="x_position">x</label></td>
+                        <td><input type="range" name="x_position" id="x_position" min="-2" max="2" step="0.01"
+                                value="1"></td>
+                    </tr>
+                    <tr>
+                        <td><label for="y_position">y</label></td>
+                        <td><input type="range" name="y_position" id="y_position" min="-2" max="2" step="0.01"
+                                value="-1"></td>
+                    </tr>
+                    <tr>
+                        <td><label for="z_position">z</label></td>
+                        <td><input type="range" name="z_position" id="z_position" min="-2" max="2" step="0.01"
+                                value="1"></td>
+                    </tr>
+                </table>
+            </td>
+            <td>
+                <table>
+                    <tr>
+                        <center><span>Light direction</span></center>
+                        <td><label for="x_direction">x</label></td>
+                        <td><input type="range" name="x_direction" id="x_direction" min="-2" max="2" step="0.01"
+                                value="-1"></td>
+                    </tr>
+                    <tr>
+                        <td><label for="y_direction">y</label></td>
+                        <td><input type="range" name="y_direction" id="y_direction" min="-2" max="2" step="0.01"
+                                value="1"></td>
+                    </tr>
+                    <tr>
+                        <td><label for="z_direction">z</label></td>
+                        <td><input type="range" name="z_direction" id="z_direction" min="-2" max="2" step="0.01"
+                                value="-2"></td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+
+
+    <table>
+        <tr>
+            <td colspan="2" style="text-align: center;">
+                <span>Spotlight</span>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <label for="angle_limit">Angle</label><br>
+                <input type="range" name="angle_limit" id="angle_limit" min="2" max="2.2" step="0.01" value="2"><br>
+            </td>
+            <td>
+                <label for="border">Softness</label><br>
+                <input type="range" name="border" id="border" min="0" max="0.2" step="0.01" value="0.1">
+            </td>
+        </tr>
+    </table>
 
 
     <div id="canvas-holder">
