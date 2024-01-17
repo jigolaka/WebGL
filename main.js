@@ -5,6 +5,22 @@ let surface;                    // A surface model
 let shProgram;                  // A shader program
 let spaceball;                  // A SimpleRotator object that lets the user rotate the view by mouse.
 let light = [];
+let locatio = [0.5, 0.5]
+
+window.onkeydown = (e) => {
+    if (e.keyCode == 87) {
+        locatio[0] = Math.min(locatio[0] + 0.05, 1);
+    }
+    else if (e.keyCode == 65) {
+        locatio[1] = Math.max(locatio[1] - 0.05, 0);
+    }
+    else if (e.keyCode == 83) {
+        locatio[0] = Math.max(locatio[0] - 0.05, 0);
+    }
+    else if (e.keyCode == 68) {
+        locatio[1] = Math.min(locatio[1] + 0.05, 1);
+    }
+}
 
 function deg2rad(angle) {
     return angle * Math.PI / 180;
@@ -16,6 +32,7 @@ function Model(name) {
     this.name = name;
     this.iVertexBuffer = gl.createBuffer();
     this.iNormalBuffer = gl.createBuffer();
+    this.iTexCoordBuffer = gl.createBuffer();
     this.count = 0;
 
     this.BufferData = function (vertices) {
@@ -31,8 +48,28 @@ function Model(name) {
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normals), gl.STREAM_DRAW);
 
     }
+    this.BufferDataTexCoords = function (texCoords) {
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.iTexCoordBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texCoords), gl.STREAM_DRAW);
+
+    }
 
     this.Draw = function () {
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
+        gl.vertexAttribPointer(shProgram.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(shProgram.iAttribVertex);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.iNormalBuffer);
+        gl.vertexAttribPointer(shProgram.iAttribNormal, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(shProgram.iAttribNormal);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.iTexCoordBuffer);
+        gl.vertexAttribPointer(shProgram.iAttribTexCoord, 2, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(shProgram.iAttribTexCoord);
+
+        gl.drawArrays(gl.TRIANGLES, 0, this.count);
+    }
+    this.DrawSphere = function () {
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
         gl.vertexAttribPointer(shProgram.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
@@ -102,21 +139,23 @@ function draw() {
 
     /* Draw the six faces of a cube, with different colors. */
     gl.uniform4fv(shProgram.iColor, [1, 1, 0, 1]);
-    let x = Math.sin(Date.now()*0.001);
-    let y = -Math.cos(Date.now()*0.001);
+    let x = Math.sin(Date.now() * 0.001);
+    let y = -Math.cos(Date.now() * 0.001);
     let z = 1;
     gl.uniform3fv(shProgram.iPosition, [x, y, z]);
     gl.uniform3fv(shProgram.iDirection, [-x, -y, -z]);
     gl.uniform1f(shProgram.iLimit, document.getElementById('limit').value);
     gl.uniform1f(shProgram.iBorder, document.getElementById('border').value);
+    gl.uniform1f(shProgram.iScale, document.getElementById('scale').value);
+    gl.uniform2fv(shProgram.iLocation, locatio);
 
     surface.Draw();
     gl.uniform1f(shProgram.iBorder, 1000);
     gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, m4.multiply(modelViewProjection,
-        m4.translation(x, y, z)));
-    light[0].Draw();
-    light[1].BufferData([-x, -y, -z, 0, 0, 0])
-    light[1].DrawLine();
+        m4.translation(...CreateDingDongVertex(locatio[0] * 2 * Math.PI, locatio[1] * 2 - 1))));
+    light[0].DrawSphere();
+    // light[1].BufferData([-x, -y, -z, 0, 0, 0])
+    // light[1].DrawLine();
 }
 
 function CreateAnimation() {
@@ -143,6 +182,7 @@ function CreateDingDongSurfaceData() {
 
     let vertexList = [];
     let normalList = [];
+    let texCoordList = [];
     let u1 = 1 / (divisionsU - 1) * 2 * Math.PI
     let v1 = 1 / (divisionsV - 1) * 2
 
@@ -162,10 +202,16 @@ function CreateDingDongSurfaceData() {
             normalList.push(...CreateAverageNormal(u0, v0 + v1, u1, v1));
             normalList.push(...CreateAverageNormal(u0 + u1, v0, u1, v1));
             normalList.push(...CreateAverageNormal(u0 + u1, v0 + v1, u1, v1));
+            texCoordList.push(u / divisionsU, v / divisionsV);
+            texCoordList.push((u + 1) / divisionsU, v / divisionsV);
+            texCoordList.push(u / divisionsU, (v + 1) / divisionsV);
+            texCoordList.push(u / divisionsU, (v + 1) / divisionsV);
+            texCoordList.push((u + 1) / divisionsU, v / divisionsV);
+            texCoordList.push((u + 1) / divisionsU, (v + 1) / divisionsV);
         }
     }
 
-    return { v: vertexList, n: normalList };
+    return { v: vertexList, n: normalList, t: texCoordList };
 }
 
 function CreateAverageNormal(u0, v0, u1, v1) {
@@ -255,12 +301,15 @@ function initGL() {
 
     shProgram.iAttribVertex = gl.getAttribLocation(prog, "vertex");
     shProgram.iAttribNormal = gl.getAttribLocation(prog, "normal");
+    shProgram.iAttribTexCoord = gl.getAttribLocation(prog, "texCoord");
     shProgram.iModelViewProjectionMatrix = gl.getUniformLocation(prog, "ModelViewProjectionMatrix");
     shProgram.iColor = gl.getUniformLocation(prog, "color");
     shProgram.iPosition = gl.getUniformLocation(prog, "u_position");
     shProgram.iDirection = gl.getUniformLocation(prog, "u_direction");
     shProgram.iLimit = gl.getUniformLocation(prog, "u_limit");
     shProgram.iBorder = gl.getUniformLocation(prog, "u_border");
+    shProgram.iLocation = gl.getUniformLocation(prog, "u_location");
+    shProgram.iScale = gl.getUniformLocation(prog, "u_scale");
 
     // surface = new Model('Surface');
     // surface.BufferData(CreateSurfaceData());
@@ -269,6 +318,7 @@ function initGL() {
     let dingDongSurfaceData = CreateDingDongSurfaceData()
     surface.BufferData(dingDongSurfaceData.v);
     surface.BufferDataNormals(dingDongSurfaceData.n);
+    surface.BufferDataTexCoords(dingDongSurfaceData.t);
     light.push(new Model())
     light.push(new Model())
     light[0].BufferData(CreateSphereSurfaceData())
@@ -341,4 +391,29 @@ function init() {
 
     draw();
     CreateAnimation();
+    LoadTexture()
+}
+
+function LoadTexture() {
+    let texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+    const image = new Image();
+    image.crossOrigin = 'anonymus';
+    image.src = "texture.jpg";
+    image.onload = () => {
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texImage2D(
+            gl.TEXTURE_2D,
+            0,
+            gl.RGBA,
+            gl.RGBA,
+            gl.UNSIGNED_BYTE,
+            image
+        );
+        console.log("imageLoaded")
+        draw()
+    }
 }
