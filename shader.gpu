@@ -41,4 +41,7 @@ void main() {
     gl_FragColor = color;
     gl_FragColor = vec4(N,1.0);
     gl_FragColor = vec4(shadedColor,1.0);
+    if(u_border>100.0){
+        gl_FragColor = vec4(1.0);
+    }
 }`;

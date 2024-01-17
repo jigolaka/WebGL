@@ -4,6 +4,7 @@ let gl;                         // The webgl context.
 let surface;                    // A surface model
 let shProgram;                  // A shader program
 let spaceball;                  // A SimpleRotator object that lets the user rotate the view by mouse.
+let light = [];
 
 function deg2rad(angle) {
     return angle * Math.PI / 180;
@@ -41,6 +42,14 @@ function Model(name) {
         gl.enableVertexAttribArray(shProgram.iAttribNormal);
 
         gl.drawArrays(gl.TRIANGLES, 0, this.count);
+    }
+    this.DrawLine = function () {
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
+        gl.vertexAttribPointer(shProgram.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(shProgram.iAttribVertex);
+
+        gl.drawArrays(gl.LINE_LOOP, 0, this.count);
     }
 
 }
@@ -93,12 +102,21 @@ function draw() {
 
     /* Draw the six faces of a cube, with different colors. */
     gl.uniform4fv(shProgram.iColor, [1, 1, 0, 1]);
-    gl.uniform3fv(shProgram.iPosition, [document.getElementById('x_position').value, document.getElementById('y_position').value, document.getElementById('z_position').value]);
-    gl.uniform3fv(shProgram.iDirection, [document.getElementById('x_direction').value, document.getElementById('y_direction').value, document.getElementById('z_direction').value]);
-    gl.uniform1f(shProgram.iLimit, document.getElementById('angle_limit').value);
+    let x = Math.sin(Date.now()*0.001);
+    let y = -Math.cos(Date.now()*0.001);
+    let z = 1;
+    gl.uniform3fv(shProgram.iPosition, [x, y, z]);
+    gl.uniform3fv(shProgram.iDirection, [-x, -y, -z]);
+    gl.uniform1f(shProgram.iLimit, document.getElementById('limit').value);
     gl.uniform1f(shProgram.iBorder, document.getElementById('border').value);
 
     surface.Draw();
+    gl.uniform1f(shProgram.iBorder, 1000);
+    gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, m4.multiply(modelViewProjection,
+        m4.translation(x, y, z)));
+    light[0].Draw();
+    light[1].BufferData([-x, -y, -z, 0, 0, 0])
+    light[1].DrawLine();
 }
 
 function CreateAnimation() {
@@ -193,6 +211,40 @@ function CreateDingDongVertex(u0, v0) {
     return [x, y, z]
 }
 
+function CreateSphereSurfaceData() {
+    let vertexList = [];
+    let u = 0;
+    let v = 0;
+    let u1 = 0.1;
+    let v1 = 0.1
+    let v0 = 0;
+    while (u < Math.PI * 2) {
+        while (v < Math.PI) {
+            let a = CreateSphereVertex(u, v);
+            let b = CreateSphereVertex(u + u1, v);
+            let c = CreateSphereVertex(u, v + v1);
+            let d = CreateSphereVertex(u + u1, v + v1);
+            vertexList.push(a.x, a.y, a.z);
+            vertexList.push(b.x, b.y, b.z);
+            vertexList.push(c.x, c.y, c.z);
+            vertexList.push(c.x, c.y, c.z);
+            vertexList.push(b.x, b.y, b.z);
+            vertexList.push(d.x, d.y, d.z);
+            v += v1;
+        }
+        v = v0;
+        u += u1;
+    }
+    return vertexList
+}
+function CreateSphereVertex(long, lat, radius = 0.1) {
+    return {
+        x: radius * Math.cos(long) * Math.sin(lat),
+        y: radius * Math.sin(long) * Math.sin(lat),
+        z: radius * Math.cos(lat)
+    }
+}
+
 
 /* Initialize the WebGL context. Called from init() */
 function initGL() {
@@ -217,6 +269,11 @@ function initGL() {
     let dingDongSurfaceData = CreateDingDongSurfaceData()
     surface.BufferData(dingDongSurfaceData.v);
     surface.BufferDataNormals(dingDongSurfaceData.n);
+    light.push(new Model())
+    light.push(new Model())
+    light[0].BufferData(CreateSphereSurfaceData())
+    light[0].BufferDataNormals(CreateSphereSurfaceData())
+    light[1].BufferData([1, 0, 0, 0, 0, 0])
 
     gl.enable(gl.DEPTH_TEST);
 }
